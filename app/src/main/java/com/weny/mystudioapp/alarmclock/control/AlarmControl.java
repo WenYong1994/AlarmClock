@@ -4,6 +4,7 @@ import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.util.Log;
@@ -17,13 +18,14 @@ import com.weny.mystudioapp.alarmclock.utils.NotificationUtils;
 import com.weny.mystudioapp.alarmclock.utils.TimeUtils;
 import com.weny.mystudioapp.alarmclock.utils.Utils;
 
+import java.lang.reflect.Type;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-
+import java.util.Map;
 public class AlarmControl {
     public static AlarmControl intence;
-
 
     public static AlarmControl getIntence() {
         if(intence==null){
@@ -40,40 +42,58 @@ public class AlarmControl {
 
     private  final int REQUEST_CODE = 0;
 
-    private  PendingIntent lastSender;
+    private  long lastTime;
 
     private  Handler handler;
 
     public  void setAlarmTime(Context context, String alarmTime){
-        DateHepler.getInstence().setAlarmTime(alarmTime);
-        DateHepler.getInstence().setAlarmCount(0);
-        Intent intent = new Intent(context, Alarmreceiver.class);
-        PendingIntent sender = PendingIntent.getBroadcast(context,
-                REQUEST_CODE, intent, PendingIntent.FLAG_CANCEL_CURRENT);
-
-        // Schedule the alarm!
-        AlarmManager am = (AlarmManager) context
-                .getSystemService(Context.ALARM_SERVICE);
-
         long date = TimeUtils.string2Date(alarmTime).getTime();
-
+        lastTime = date;
         if(date!=0){//异常了不要设置
-            if(lastSender!=null){//取消上一次的设置
-                am.cancel(lastSender);
+            Intent intent = new Intent(context, Alarmreceiver.class);
+            intent.putExtra("time",date);
+            intent.putExtra("id",REQUEST_CODE);
+            PendingIntent sender = PendingIntent.getBroadcast(context,
+                    REQUEST_CODE, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+
+            // Schedule the alarm!
+            AlarmManager am = (AlarmManager) context
+                    .getSystemService(Context.ALARM_SERVICE);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,date , sender);
+                }else {
+                    am.setExact(AlarmManager.RTC_WAKEUP,date , sender);
+                }
+            }else {
+                am.setRepeating(AlarmManager.RTC_WAKEUP,date , 1000*60, sender);
             }
-            lastSender = sender;
-            am.setRepeating(AlarmManager.RTC_WAKEUP,date , 1000*5*2, sender);
+            DateHepler.getInstence().setAlarmTime(alarmTime);
+            DateHepler.getInstence().setAlarmCount(0);
+
+//            cancleAlarm(context,REQUEST_CODE);
+//
         }
 
     }
 
-    public  void turnoffAlarm(){
+    public void cancleAlarm(Context context,int id){
+        AlarmManager am = (AlarmManager) context
+                .getSystemService(Context.ALARM_SERVICE);
+        Intent intent = new Intent(context, Alarmreceiver.class);
+//        intent.putExtra("time",lastTime);
+        PendingIntent sender = PendingIntent.getBroadcast(context,
+                id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+        am.cancel(sender);
+    }
+
+
+
+    public  void turnoffAlarm(Context context){
         DateHepler.getInstence().setAlarmCount(0);
         DateHepler.getInstence().setAlarmTime("");
         SoundContorl.getInstence().stopSound();
-        AlarmManager am = (AlarmManager) App.getApp()
-                .getSystemService(Context.ALARM_SERVICE);
-        am.cancel(lastSender);
+        cancleAlarm(context,REQUEST_CODE);
     }
 
 
@@ -108,7 +128,10 @@ public class AlarmControl {
             public void run() {
                 SoundContorl.getInstence().stopSound();
             }
-        },5*1000);
+        }, 10*1000);
+
+
+
 
     }
 

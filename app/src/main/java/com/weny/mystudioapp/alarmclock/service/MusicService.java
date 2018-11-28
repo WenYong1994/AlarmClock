@@ -9,6 +9,7 @@ import com.weny.mystudioapp.alarmclock.R;
 
 public class MusicService extends Service {
     private MediaPlayer player;
+
     @Override
     public IBinder onBind(Intent intent) {
         // TODO Auto-generated method stub

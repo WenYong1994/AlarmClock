@@ -74,7 +74,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 pvTime.show();
                 break;
             case R.id.turnoff_alarm:
-                AlarmControl.getIntence().turnoffAlarm();
+                AlarmControl.getIntence().turnoffAlarm(MainActivity.this);
                 alarmTime.setText("提示时间:暂时无闹钟");
                 break;
         }
