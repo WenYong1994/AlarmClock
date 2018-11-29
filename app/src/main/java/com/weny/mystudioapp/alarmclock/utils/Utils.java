@@ -1,8 +1,12 @@
 package com.weny.mystudioapp.alarmclock.utils;
 
+import android.annotation.TargetApi;
+import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.ComponentName;
 import android.content.Context;
+import android.os.Build;
+import android.os.PowerManager;
 
 import java.util.List;
 
@@ -41,5 +45,20 @@ public class Utils {
         }
         return false;
     }
+
+
+    @TargetApi(Build.VERSION_CODES.M)
+    public static boolean isIgnoringBatteryOptimizations(Activity activity){
+        String packageName = activity.getPackageName();
+        PowerManager pm = (PowerManager) activity
+                .getSystemService(Context.POWER_SERVICE);
+        if (pm.isIgnoringBatteryOptimizations(packageName)) {
+            return true;
+        }else {
+            return false;
+        }
+    }
+
+
 
 }

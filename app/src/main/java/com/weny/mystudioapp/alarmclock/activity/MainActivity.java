@@ -1,7 +1,16 @@
 package com.weny.mystudioapp.alarmclock.activity;
 
+import android.app.Activity;
+import android.app.job.JobInfo;
+import android.app.job.JobScheduler;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
+import android.os.PowerManager;
 import android.os.SystemClock;
+import android.provider.Settings;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -14,6 +23,7 @@ import com.weny.mystudioapp.alarmclock.R;
 import com.weny.mystudioapp.alarmclock.control.AlarmControl;
 import com.weny.mystudioapp.alarmclock.control.SoundContorl;
 import com.weny.mystudioapp.alarmclock.model.DateHepler;
+import com.weny.mystudioapp.alarmclock.service.AlarmService;
 import com.weny.mystudioapp.alarmclock.service.MusicService;
 
 import java.text.SimpleDateFormat;
@@ -21,12 +31,13 @@ import java.util.Calendar;
 import java.util.Date;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+    private static final int REQUEST_IGNORE_BATTERY_CODE = 100;
     TextView alarmTime;
 
     Button chioceTime;
 
     Button turnoffAlarm;
-
+    JobScheduler mJobScheduler;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -34,6 +45,57 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         initView();
         initValueView();
         initListenr();
+        checkPower();
+        isIgnoreBatteryOption(this);
+    }
+
+    private void checkPower() {
+
+
+
+
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            mJobScheduler = (JobScheduler) getSystemService(Context.JOB_SCHEDULER_SERVICE);
+            JobInfo.Builder builder = new JobInfo.Builder(1, new ComponentName(getPackageName(), AlarmService.class.getName()));
+
+            builder.setPeriodic(60 * 1000); //每隔60秒运行一次
+            builder.setRequiresCharging(true);
+            builder.setPersisted(true);  //设置设备重启后，是否重新执行任务
+            builder.setRequiresDeviceIdle(true);
+
+//            if (mJobScheduler.schedule(builder.build()) <= 0) {
+//                //If something goes wrong
+//            }
+        }
+
+
+        Intent intent =new Intent(this,AlarmService.class);
+        startService(intent);
+
+    }
+
+    /**
+     * 针对N以上的Doze模式
+     *
+     * @param activity
+     */
+    public static void isIgnoreBatteryOption(Activity activity) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
+                Intent intent = new Intent();
+                String packageName = activity.getPackageName();
+                PowerManager pm = (PowerManager) activity.getSystemService(Context.POWER_SERVICE);
+                if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+//               intent.setAction(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+                    intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                    intent.setData(Uri.parse("package:" + packageName));
+                    activity.startActivityForResult(intent, REQUEST_IGNORE_BATTERY_CODE);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private void initValueView() {
@@ -101,4 +163,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Intent intent =new Intent(this,MusicService.class);
         stopService(intent);
     }
+
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (resultCode == RESULT_OK) {
+            if (requestCode == REQUEST_IGNORE_BATTERY_CODE){
+                //TODO something
+            }
+        }else if (resultCode == RESULT_CANCELED){
+
+        }
+    }
+
 }
